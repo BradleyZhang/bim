@@ -4,8 +4,8 @@ A simple instant messaging system built with Go.
 
 Server
 ```bash
-go build
-./bim
+go -C server build -o ../bin/bim
+./bin/bim
 ```
 
 Client
