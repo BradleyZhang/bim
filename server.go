@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"sync"
@@ -31,7 +32,26 @@ func (s *Server) Handler(conn net.Conn) {
 	s.OnlineUsers[user.Name] = user
 	s.ouLock.Unlock()
 
-	s.BroadCast(user, "已上线")
+	// 广播上线信息
+	s.BroadCastUserMsg(user, "已上线")
+
+	// 广播用户信息
+	go func() {
+		buf := make([]byte, 4096)
+		for {
+			n, err := conn.Read(buf)
+			if n == 0 {
+				s.BroadCastUserMsg(user, "下线")
+				return
+			}
+			if err != nil && err != io.EOF {
+				fmt.Println("Conn Read err:", err)
+				return
+			}
+			msg := string(buf[:n-1])
+			s.BroadCastUserMsg(user, msg)
+		}
+	}()
 }
 func (s *Server) HandleBroadcast() {
 	for {
@@ -45,7 +65,7 @@ func (s *Server) HandleBroadcast() {
 	}
 }
 
-func (s *Server) BroadCast(user *User, msg string) {
+func (s *Server) BroadCastUserMsg(user *User, msg string) {
 	var sengMsg strings.Builder
 	sengMsg.WriteString("[")
 	sengMsg.WriteString(user.Addr)
