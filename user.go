@@ -1,6 +1,9 @@
 package main
 
-import "net"
+import (
+	"net"
+	"strings"
+)
 
 type User struct {
 	Name string
@@ -10,6 +13,10 @@ type User struct {
 
 	server *Server
 }
+
+const (
+	GetOnlineUsers = "list"
+)
 
 func NewUser(conn net.Conn, server *Server) *User {
 	userAddr := conn.RemoteAddr().String()
@@ -49,6 +56,25 @@ func (u *User) OffLine() {
 
 	u.server.BroadCastUserMsg(u, "下线")
 }
+func (u *User) SendMsg(msg string) {
+	u.conn.Write([]byte(msg + "\n"))
+}
 func (u *User) DoMessage(msg string) {
-	u.server.BroadCastUserMsg(u, msg)
+	switch msg {
+	case GetOnlineUsers:
+		u.server.ouLock.Lock()
+		var sengMsg strings.Builder
+		for _, user := range u.server.OnlineUsers {
+			sengMsg.WriteString("[")
+			sengMsg.WriteString(user.Addr)
+			sengMsg.WriteString("]")
+			sengMsg.WriteString(user.Name)
+			sengMsg.WriteString(":在线\n")
+		}
+		u.SendMsg(sengMsg.String())
+		u.server.ouLock.Unlock()
+	default:
+		u.server.BroadCastUserMsg(u, msg)
+	}
+
 }
