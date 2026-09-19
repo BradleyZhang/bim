@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bim/command"
 	"flag"
 	"fmt"
+	"io"
 	"net"
+	"os"
 )
 
 var (
@@ -61,9 +64,24 @@ func (c *Client) Run() {
 		case 2:
 			fmt.Println("私聊")
 		case 3:
-			fmt.Println("重命名")
+			c.Updatename()
 		}
 	}
+}
+func (c *Client) DealResponse() {
+	io.Copy(os.Stdout, c.conn)
+}
+func (c *Client) Updatename() bool {
+	fmt.Println(">>>>> 请输入用户名:")
+	fmt.Scanln(&c.Name)
+
+	sendMsg := command.Rename + c.Name + "\n"
+	_, err := c.conn.Write([]byte(sendMsg))
+	if err != nil {
+		fmt.Println("conn.Write err:", err)
+		return false
+	}
+	return true
 }
 func main() {
 	flag.Parse()
@@ -73,6 +91,7 @@ func main() {
 		fmt.Println(">>>>> 连接服务器失败...")
 		return
 	}
+	go client.DealResponse()
 	fmt.Println(">>>>> 连接服务器成功...")
 	client.Run()
 }
