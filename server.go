@@ -27,29 +27,24 @@ func NewServer(ip string, port int) *Server {
 	}
 }
 func (s *Server) Handler(conn net.Conn) {
-	user := NewUser(conn)
-	s.ouLock.Lock()
-	s.OnlineUsers[user.Name] = user
-	s.ouLock.Unlock()
+	user := NewUser(conn, s)
+	user.Online()
 
-	// 广播上线信息
-	s.BroadCastUserMsg(user, "已上线")
-
-	// 广播用户信息
+	// 接收消息转交user处理
 	go func() {
 		buf := make([]byte, 4096)
 		for {
 			n, err := conn.Read(buf)
 			if n == 0 {
-				s.BroadCastUserMsg(user, "下线")
+				user.OffLine()
 				return
 			}
 			if err != nil && err != io.EOF {
 				fmt.Println("Conn Read err:", err)
 				return
 			}
-			msg := string(buf[:n-1])
-			s.BroadCastUserMsg(user, msg)
+			msg := string(buf[:n-1]) // 去除'\n'
+			user.DoMessage(msg)
 		}
 	}()
 }

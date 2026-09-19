@@ -7,15 +7,18 @@ type User struct {
 	Addr string
 	C    chan string
 	conn net.Conn
+
+	server *Server
 }
 
-func NewUser(conn net.Conn) *User {
+func NewUser(conn net.Conn, server *Server) *User {
 	userAddr := conn.RemoteAddr().String()
 	user := &User{
-		Name: userAddr,
-		Addr: userAddr,
-		C:    make(chan string),
-		conn: conn,
+		Name:   userAddr,
+		Addr:   userAddr,
+		C:      make(chan string),
+		conn:   conn,
+		server: server,
 	}
 	go user.ListenMessage()
 	return user
@@ -28,4 +31,24 @@ func (u *User) ListenMessage() {
 		msg := <-u.C
 		u.conn.Write([]byte(msg + "\n"))
 	}
+}
+
+func (u *User) Online() {
+	u.server.ouLock.Lock()
+	u.server.OnlineUsers[u.Name] = u
+	u.server.ouLock.Unlock()
+
+	// 广播上线信息
+	u.server.BroadCastUserMsg(u, "已上线")
+
+}
+func (u *User) OffLine() {
+	u.server.ouLock.Lock()
+	delete(u.server.OnlineUsers, u.Name)
+	u.server.ouLock.Unlock()
+
+	u.server.BroadCastUserMsg(u, "下线")
+}
+func (u *User) DoMessage(msg string) {
+	u.server.BroadCastUserMsg(u, msg)
 }
