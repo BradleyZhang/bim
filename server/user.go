@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bim/command"
 	"net"
 	"strings"
 )
@@ -13,12 +14,6 @@ type User struct {
 
 	server *Server
 }
-
-const (
-	CommandGetOnlineUsers = "list"
-	CommandRename         = "rename|"
-	CommandPrivateChat    = "to|"
-)
 
 func NewUser(conn net.Conn, server *Server) *User {
 	userAddr := conn.RemoteAddr().String()
@@ -63,7 +58,7 @@ func (u *User) SendMsg(msg string) {
 }
 func (u *User) DoMessage(msg string) {
 
-	if msg == CommandGetOnlineUsers {
+	if msg == command.GetOnlineUsers {
 		u.server.ouLock.Lock()
 		var sengMsg strings.Builder
 		for _, user := range u.server.OnlineUsers {
@@ -78,8 +73,8 @@ func (u *User) DoMessage(msg string) {
 
 		return
 	}
-	if strings.HasPrefix(msg, CommandRename) {
-		newName := strings.TrimPrefix(msg, CommandRename)
+	if strings.HasPrefix(msg, command.Rename) {
+		newName := strings.TrimPrefix(msg, command.Rename)
 
 		if _, ok := u.server.OnlineUsers[newName]; ok {
 			u.SendMsg("当前用户名已被使用")
@@ -93,9 +88,9 @@ func (u *User) DoMessage(msg string) {
 
 		return
 	}
-	if strings.HasPrefix(msg, CommandPrivateChat) {
+	if strings.HasPrefix(msg, command.PrivateChat) {
 
-		s := strings.Split(strings.TrimPrefix(msg, CommandPrivateChat), "|")
+		s := strings.Split(strings.TrimPrefix(msg, command.PrivateChat), "|")
 		remoteName, content := s[0], strings.Join(s[1:], "")
 		if content == "" {
 			u.SendMsg("未声明消息\n用法: \n\tto|username|message")
