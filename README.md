@@ -4,12 +4,12 @@ A simple instant messaging system built with Go.
 
 Server
 ```bash
-go -C server build -o ../bin/bim
-./bin/bim
+go -C server build -o ../bin/bim-server
+./bin/bim-server
 ```
 
 Client
-Connect to Server using Netcat
 ```bash
-nc 127.0.0.1 8888
+go -C client build -o ../bin/bim-client
+./bin/bim-client
 ```
