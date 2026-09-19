@@ -17,6 +17,7 @@ type User struct {
 const (
 	CommandGetOnlineUsers = "list"
 	CommandRename         = "rename|"
+	CommandPrivateChat    = "to|"
 )
 
 func NewUser(conn net.Conn, server *Server) *User {
@@ -58,7 +59,7 @@ func (u *User) OffLine() {
 	u.server.BroadCastUserMsg(u, "下线")
 }
 func (u *User) SendMsg(msg string) {
-	u.conn.Write([]byte(msg))
+	u.conn.Write([]byte(msg + "\n"))
 }
 func (u *User) DoMessage(msg string) {
 
@@ -81,7 +82,7 @@ func (u *User) DoMessage(msg string) {
 		newName := strings.TrimPrefix(msg, CommandRename)
 
 		if _, ok := u.server.OnlineUsers[newName]; ok {
-			u.SendMsg("当前用户名已被使用\n")
+			u.SendMsg("当前用户名已被使用")
 		} else {
 			u.server.ouLock.Lock()
 			delete(u.server.OnlineUsers, u.Name)
@@ -91,6 +92,30 @@ func (u *User) DoMessage(msg string) {
 		}
 
 		return
+	}
+	if strings.HasPrefix(msg, CommandPrivateChat) {
+
+		s := strings.Split(strings.TrimPrefix(msg, CommandPrivateChat), "|")
+		remoteName, content := s[0], strings.Join(s[1:], "")
+		if content == "" {
+			u.SendMsg("未声明消息\n用法: \n\tto|username|message")
+			return
+		}
+		if remoteUser, ok := u.server.OnlineUsers[remoteName]; ok {
+			var sengMsg strings.Builder
+			sengMsg.WriteString("[")
+			sengMsg.WriteString(u.Addr)
+			sengMsg.WriteString("]")
+			sengMsg.WriteString(u.Name)
+			sengMsg.WriteString("(私聊):")
+			sengMsg.WriteString(content)
+			sengMsg.WriteString("\n")
+			remoteUser.SendMsg(sengMsg.String())
+			return
+		} else {
+			u.SendMsg("用户:" + remoteName + " 未上线")
+			return
+		}
 	}
 
 	u.server.BroadCastUserMsg(u, msg)
