@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -26,9 +28,16 @@ func NewServer(ip string, port int) *Server {
 		BroadcastMsg: make(chan string),
 	}
 }
+
+const (
+	IdleExpireSecond = 120 // 120s 后超时下线
+)
+
 func (s *Server) Handler(conn net.Conn) {
 	user := NewUser(conn, s)
 	user.Online()
+
+	isLive := make(chan bool)
 
 	// 接收消息转交user处理
 	go func() {
@@ -45,8 +54,22 @@ func (s *Server) Handler(conn net.Conn) {
 			}
 			msg := string(buf[:n-1]) // 去除'\n'
 			user.DoMessage(msg)
+
+			isLive <- true
 		}
 	}()
+
+	for {
+		select {
+		case <-time.After(time.Second * IdleExpireSecond): // 超时，
+			user.SendMsg("超时下线\n")
+			close(user.C)
+			user.conn.Close()
+			runtime.Goexit()
+		case <-isLive:
+			// 更新计时器
+		}
+	}
 }
 func (s *Server) HandleBroadcast() {
 	for {
