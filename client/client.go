@@ -2,11 +2,13 @@ package main
 
 import (
 	"bim/command"
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
 	"net"
 	"os"
+	"strings"
 )
 
 var (
@@ -42,7 +44,7 @@ func (c *Client) menu() bool {
 	fmt.Println("1.公聊")
 	fmt.Println("2.私聊")
 	fmt.Println("3.更新用户名")
-	fmt.Println("0.推出")
+	fmt.Println("0.退出")
 
 	fmt.Scanln(&flag)
 	if flag >= 0 && flag <= 3 {
@@ -60,7 +62,7 @@ func (c *Client) Run() {
 		}
 		switch c.flag {
 		case 1:
-			fmt.Println("公聊")
+			c.PublishChat()
 		case 2:
 			fmt.Println("私聊")
 		case 3:
@@ -82,6 +84,36 @@ func (c *Client) Updatename() bool {
 		return false
 	}
 	return true
+}
+func (c *Client) PublishChat() {
+	reader := bufio.NewReader(os.Stdin)
+	var chat string
+	fmt.Println(">>>>> 请输入聊天内容,exit退出.")
+	chat, err := reader.ReadString('\n')
+	chat = strings.TrimSpace(chat)
+
+	if err != nil {
+		fmt.Println("read err", err)
+		return
+	}
+	for chat != "exit" {
+		if len(chat) != 0 {
+			sendMsg := chat + "\n"
+			_, err := c.conn.Write([]byte(sendMsg))
+			if err != nil {
+				fmt.Println("conn Write err:", err)
+				break
+			}
+		}
+		chat = ""
+		fmt.Println(">>>>> 请输入聊天内容,exit退出.")
+		chat, err = reader.ReadString('\n')
+		chat = strings.TrimSpace(chat)
+		if err != nil {
+			fmt.Println("read err", err)
+			break
+		}
+	}
 }
 func main() {
 	flag.Parse()
