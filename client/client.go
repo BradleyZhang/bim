@@ -64,7 +64,7 @@ func (c *Client) Run() {
 		case 1:
 			c.PublishChat()
 		case 2:
-			fmt.Println("私聊")
+			c.PrivateChat()
 		case 3:
 			c.Updatename()
 		}
@@ -112,6 +112,51 @@ func (c *Client) PublishChat() {
 		if err != nil {
 			fmt.Println("read err", err)
 			break
+		}
+	}
+}
+
+func (c *Client) ListUsers() {
+	sendMsg := command.GetOnlineUsers + "\n"
+	if _, err := c.conn.Write([]byte(sendMsg)); err != nil {
+		fmt.Println("conn Write err:", err)
+	}
+}
+
+func (c *Client) PrivateChat() {
+	for {
+		c.ListUsers()
+		fmt.Println(">>>>> 输入聊天对象用户名,exit 退出")
+		reader := bufio.NewReader(os.Stdin)
+		remoteUser, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("read err:", err)
+			break
+		}
+		remoteUser = strings.TrimSpace(remoteUser)
+		if remoteUser == "exit" {
+			break
+		}
+		for {
+			fmt.Println(">>>>> 输入聊天信息,exit 退出")
+			msg, err := reader.ReadString('\n')
+			msg = strings.TrimSpace(msg)
+			if err != nil {
+				fmt.Println("read err", err)
+				break
+			}
+			if msg == "exit" {
+				break
+			}
+			if len(msg) != 0 {
+				sendMsg := command.PrivateChat + remoteUser + command.Delimiter + msg + "\n"
+				_, err := c.conn.Write([]byte(sendMsg))
+				if err != nil {
+					fmt.Println("conn Write err:", err)
+					break
+				}
+			}
+
 		}
 	}
 }

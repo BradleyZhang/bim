@@ -4,4 +4,5 @@ const (
 	GetOnlineUsers = "list"
 	Rename         = "rename|"
 	PrivateChat    = "to|"
+	Delimiter      = "|"
 )
